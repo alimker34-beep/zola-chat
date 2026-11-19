@@ -1,7 +1,6 @@
-import { LanguageModelV1 } from "ai"
-
 type ModelConfig = {
   id: string // "gpt-4.1-nano" // same from AI SDKs
+  rawId?: string // Native provider model ID, e.g. "openai/gpt-4.1"
   name: string // "GPT-4.1 Nano"
   provider: string // "OpenAI", "Mistral", etc.
   providerId: string // "openai", "mistral", etc.
@@ -31,13 +30,15 @@ type ModelConfig = {
   modelPage?: string // official product page (e.g. https://x.ai/news/grok-2)
   releasedAt?: string // "2024-12-01" (optional, for tracking changes)
 
-  icon?: string // e.g. "gpt-4", "claude", "mistral", or custom string
+  capabilities?: string[]
+  modality?: string
+  isFree?: boolean
+  availability?: "available" | "unavailable" | "unknown"
+  source?: "discovered" | "static" | "ollama" | "platform"
+  providerMeta?: Record<string, unknown>
+  updatedAt?: string
 
-  // apiSdk?: () => LanguageModelV1 // "openai("gpt-4.1-nano")"
-  apiSdk?: (
-    apiKey?: string,
-    opts?: { enableSearch?: boolean }
-  ) => LanguageModelV1
+  icon?: string // e.g. "gpt-4", "claude", "mistral", or custom string
 
   accessible?: boolean // true if the model is accessible to the user
 }

@@ -5,52 +5,71 @@ import { createOpenAI, openai } from "@ai-sdk/openai"
 import { createPerplexity, perplexity } from "@ai-sdk/perplexity"
 import type { LanguageModelV1 } from "@ai-sdk/provider"
 import { createXai, xai } from "@ai-sdk/xai"
-import { getProviderForModel } from "./provider-map"
-import type {
-  AnthropicModel,
-  GeminiModel,
-  MistralModel,
-  OllamaModel,
-  OpenAIModel,
-  PerplexityModel,
-  SupportedModel,
-  XaiModel,
-} from "./types"
+import { createOpenRouter } from "@openrouter/ai-sdk-provider"
 
-type OpenAIChatSettings = Parameters<typeof openai>[1]
-type MistralProviderSettings = Parameters<typeof mistral>[1]
-type GoogleGenerativeAIProviderSettings = Parameters<typeof google>[1]
-type PerplexityProviderSettings = Parameters<typeof perplexity>[0]
-type AnthropicProviderSettings = Parameters<typeof anthropic>[1]
-type XaiProviderSettings = Parameters<typeof xai>[1]
-type OllamaProviderSettings = OpenAIChatSettings // Ollama uses OpenAI-compatible API
+export type ProviderId =
+  | "openai"
+  | "anthropic"
+  | "google"
+  | "mistral"
+  | "xai"
+  | "perplexity"
+  | "openrouter"
+  | "ollama"
 
-type ModelSettings<T extends SupportedModel> = T extends OpenAIModel
-  ? OpenAIChatSettings
-  : T extends MistralModel
-    ? MistralProviderSettings
-    : T extends PerplexityModel
-      ? PerplexityProviderSettings
-      : T extends GeminiModel
-        ? GoogleGenerativeAIProviderSettings
-        : T extends AnthropicModel
-          ? AnthropicProviderSettings
-          : T extends XaiModel
-            ? XaiProviderSettings
-            : T extends OllamaModel
-              ? OllamaProviderSettings
-              : never
+export type OpenProvidersOptions = {
+  enableSearch?: boolean
+  [key: string]: unknown
+}
 
-export type OpenProvidersOptions<T extends SupportedModel> = ModelSettings<T>
+export function parseModelReference(modelId: string): {
+  providerId: ProviderId
+  rawModelId: string
+} {
+  const separatorIndex = modelId.indexOf(":")
+
+  if (separatorIndex === -1) {
+    throw new Error(
+      `Model "${modelId}" is not provider-qualified. Expected format "provider:model".`
+    )
+  }
+
+  const providerId = modelId.slice(0, separatorIndex) as ProviderId
+  const rawModelId = modelId.slice(separatorIndex + 1)
+
+  if (!rawModelId) {
+    throw new Error(`Invalid model ID: ${modelId}`)
+  }
+
+  const supportedProviders: ProviderId[] = [
+    "openai",
+    "anthropic",
+    "google",
+    "mistral",
+    "xai",
+    "perplexity",
+    "openrouter",
+    "ollama",
+  ]
+
+  if (!supportedProviders.includes(providerId)) {
+    throw new Error(
+      `Unsupported provider "${providerId}" in model "${modelId}"`
+    )
+  }
+
+  return {
+    providerId,
+    rawModelId,
+  }
+}
 
 // Get Ollama base URL from environment or use default
 const getOllamaBaseURL = () => {
   if (typeof window !== "undefined") {
-    // Client-side: use localhost
     return "http://localhost:11434/v1"
   }
 
-  // Server-side: check environment variables
   return (
     process.env.OLLAMA_BASE_URL?.replace(/\/+$/, "") + "/v1" ||
     "http://localhost:11434/v1"
@@ -61,100 +80,132 @@ const getOllamaBaseURL = () => {
 const createOllamaProvider = () => {
   return createOpenAI({
     baseURL: getOllamaBaseURL(),
-    apiKey: "ollama", // Ollama doesn't require a real API key
+    apiKey: "ollama",
     name: "ollama",
   })
 }
 
-export function openproviders<T extends SupportedModel>(
-  modelId: T,
-  settings?: OpenProvidersOptions<T>,
+function getOpenRouterOptions(enableSearch?: boolean) {
+  if (!enableSearch) {
+    return undefined
+  }
+
+  return {
+    extraBody: {
+      plugins: [
+        {
+          id: "web",
+          max_results: 3,
+        },
+      ],
+    },
+  }
+}
+
+export function openproviders(
+  modelId: string,
+  settings?: OpenProvidersOptions,
   apiKey?: string
 ): LanguageModelV1 {
-  const provider = getProviderForModel(modelId)
+  const { providerId, rawModelId } = parseModelReference(modelId)
 
-  if (provider === "openai") {
+  const enableSearch = settings?.enableSearch
+
+  if (providerId === "openrouter") {
+    const resolvedApiKey = apiKey || process.env.OPENROUTER_API_KEY
+
+    if (!resolvedApiKey) {
+      throw new Error("OpenRouter API key is not configured")
+    }
+
+    const openrouterProvider = createOpenRouter({
+      apiKey: resolvedApiKey,
+    })
+
+    return openrouterProvider.chat(
+      rawModelId,
+      getOpenRouterOptions(enableSearch)
+    )
+  }
+
+  if (providerId === "openai") {
     if (apiKey) {
       const openaiProvider = createOpenAI({
         apiKey,
         compatibility: "strict",
       })
-      return openaiProvider(
-        modelId as OpenAIModel,
-        settings as OpenAIChatSettings
-      )
+
+      return openaiProvider(rawModelId, settings as never)
     }
-    return openai(modelId as OpenAIModel, settings as OpenAIChatSettings)
+
+    return openai(rawModelId, settings as never)
   }
 
-  if (provider === "mistral") {
+  if (providerId === "mistral") {
     if (apiKey) {
-      const mistralProvider = createMistral({ apiKey })
-      return mistralProvider(
-        modelId as MistralModel,
-        settings as MistralProviderSettings
-      )
+      const mistralProvider = createMistral({
+        apiKey,
+      })
+
+      return mistralProvider(rawModelId, settings as never)
     }
-    return mistral(modelId as MistralModel, settings as MistralProviderSettings)
+
+    return mistral(rawModelId, settings as never)
   }
 
-  if (provider === "google") {
+  if (providerId === "google") {
     if (apiKey) {
-      const googleProvider = createGoogleGenerativeAI({ apiKey })
-      return googleProvider(
-        modelId as GeminiModel,
-        settings as GoogleGenerativeAIProviderSettings
-      )
+      const googleProvider = createGoogleGenerativeAI({
+        apiKey,
+      })
+
+      return googleProvider(rawModelId, settings as never)
     }
-    return google(
-      modelId as GeminiModel,
-      settings as GoogleGenerativeAIProviderSettings
-    )
+
+    return google(rawModelId, settings as never)
   }
 
-  if (provider === "perplexity") {
+  if (providerId === "perplexity") {
     if (apiKey) {
-      const perplexityProvider = createPerplexity({ apiKey })
-      return perplexityProvider(
-        modelId as PerplexityModel
-        // settings as PerplexityProviderSettings
-      )
+      const perplexityProvider = createPerplexity({
+        apiKey,
+      })
+
+      return perplexityProvider(rawModelId)
     }
-    return perplexity(
-      modelId as PerplexityModel
-      // settings as PerplexityProviderSettings
-    )
+
+    return perplexity(rawModelId)
   }
 
-  if (provider === "anthropic") {
+  if (providerId === "anthropic") {
     if (apiKey) {
-      const anthropicProvider = createAnthropic({ apiKey })
-      return anthropicProvider(
-        modelId as AnthropicModel,
-        settings as AnthropicProviderSettings
-      )
+      const anthropicProvider = createAnthropic({
+        apiKey,
+      })
+
+      return anthropicProvider(rawModelId, settings as never)
     }
-    return anthropic(
-      modelId as AnthropicModel,
-      settings as AnthropicProviderSettings
-    )
+
+    return anthropic(rawModelId, settings as never)
   }
 
-  if (provider === "xai") {
+  if (providerId === "xai") {
     if (apiKey) {
-      const xaiProvider = createXai({ apiKey })
-      return xaiProvider(modelId as XaiModel, settings as XaiProviderSettings)
+      const xaiProvider = createXai({
+        apiKey,
+      })
+
+      return xaiProvider(rawModelId, settings as never)
     }
-    return xai(modelId as XaiModel, settings as XaiProviderSettings)
+
+    return xai(rawModelId, settings as never)
   }
 
-  if (provider === "ollama") {
+  if (providerId === "ollama") {
     const ollamaProvider = createOllamaProvider()
-    return ollamaProvider(
-      modelId as OllamaModel,
-      settings as OllamaProviderSettings
-    )
+
+    return ollamaProvider(rawModelId, settings as never)
   }
 
-  throw new Error(`Unsupported model: ${modelId}`)
+  throw new Error(`Unsupported provider: ${providerId}`)
 }

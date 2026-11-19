@@ -6,7 +6,7 @@ import { grokModels } from "./data/grok"
 import { mistralModels } from "./data/mistral"
 import { getOllamaModels, ollamaModels } from "./data/ollama"
 import { openaiModels } from "./data/openai"
-import { openrouterModels } from "./data/openrouter"
+import { discoverOpenRouterModels } from "./discovery"
 import { perplexityModels } from "./data/perplexity"
 import { ModelConfig } from "./types"
 
@@ -20,7 +20,6 @@ const STATIC_MODELS: ModelConfig[] = [
   ...perplexityModels,
   ...geminiModels,
   ...ollamaModels, // Static fallback Ollama models
-  ...openrouterModels,
 ]
 
 // Dynamic models cache
@@ -32,27 +31,54 @@ const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 export async function getAllModels(): Promise<ModelConfig[]> {
   const now = Date.now()
 
-  // Use cache if it's still valid
   if (dynamicModelsCache && now - lastFetchTime < CACHE_DURATION) {
     return dynamicModelsCache
   }
 
   try {
-    // Get dynamically detected Ollama models (includes enabled check internally)
-    const detectedOllamaModels = await getOllamaModels()
+    const [detectedOllamaModels, discoveredOpenRouterModels] =
+      await Promise.all([
+        getOllamaModels(),
+        discoverOpenRouterModels(),
+      ])
 
-    // Combine static models (excluding static Ollama models) with detected ones
     const staticModelsWithoutOllama = STATIC_MODELS.filter(
       (model) => model.providerId !== "ollama"
     )
 
-    dynamicModelsCache = [...staticModelsWithoutOllama, ...detectedOllamaModels]
+    dynamicModelsCache = [
+      ...staticModelsWithoutOllama,
+      ...detectedOllamaModels,
+      ...discoveredOpenRouterModels,
+    ]
 
     lastFetchTime = now
+
     return dynamicModelsCache
   } catch (error) {
-    console.warn("Failed to load dynamic models, using static models:", error)
-    return STATIC_MODELS
+    console.warn(
+      "Failed to load dynamic models, using available static models:",
+      error
+    )
+
+    const staticModelsWithoutOllama = STATIC_MODELS.filter(
+      (model) => model.providerId !== "ollama"
+    )
+
+    try {
+      const detectedOllamaModels = await getOllamaModels()
+
+      dynamicModelsCache = [
+        ...staticModelsWithoutOllama,
+        ...detectedOllamaModels,
+      ]
+
+      lastFetchTime = now
+
+      return dynamicModelsCache
+    } catch {
+      return STATIC_MODELS
+    }
   }
 }
 
@@ -82,16 +108,14 @@ export async function getModelsWithAccessFlags(): Promise<ModelConfig[]> {
 export async function getModelsForProvider(
   provider: string
 ): Promise<ModelConfig[]> {
-  const models = STATIC_MODELS
+  const models = await getAllModels()
 
-  const providerModels = models
+  return models
     .filter((model) => model.providerId === provider)
     .map((model) => ({
       ...model,
       accessible: true,
     }))
-
-  return providerModels
 }
 
 // Function to get models based on user's available providers
@@ -126,4 +150,4 @@ export const MODELS: ModelConfig[] = STATIC_MODELS
 export function refreshModelsCache(): void {
   dynamicModelsCache = null
   lastFetchTime = 0
-}
+                        }

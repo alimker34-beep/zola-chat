@@ -1,6 +1,8 @@
 import { SYSTEM_PROMPT_DEFAULT } from "@/lib/config"
-import { getAllModels } from "@/lib/models"
-import { getProviderForModel } from "@/lib/openproviders/provider-map"
+import {
+  openproviders,
+  parseModelReference,
+} from "@/lib/openproviders"
 import type { ProviderWithoutOllama } from "@/lib/user-keys"
 import { Attachment } from "@ai-sdk/ui-utils"
 import { Message as MessageAISDK, streamText, ToolSet } from "ai"
@@ -86,26 +88,39 @@ export async function POST(req: Request) {
       })
     }
 
-    const allModels = await getAllModels()
-    const modelConfig = allModels.find((m) => m.id === model)
-
-    if (!modelConfig || !modelConfig.apiSdk) {
-      throw new Error(`Model ${model} not found`)
-    }
-
     const effectiveSystemPrompt = systemPrompt || SYSTEM_PROMPT_DEFAULT
 
+    const { providerId } = parseModelReference(model)
+
     let apiKey: string | undefined
+
     if (isAuthenticated && userId) {
       const { getEffectiveApiKey } = await import("@/lib/user-keys")
-      const provider = getProviderForModel(model)
-      apiKey =
-        (await getEffectiveApiKey(userId, provider as ProviderWithoutOllama)) ||
-        undefined
+
+      if (providerId !== "ollama") {
+        apiKey =
+          (await getEffectiveApiKey(userId, providerId as ProviderWithoutOllama)) ||
+          undefined
+      }
     }
 
+    console.log("========== ZOLA MODEL DEBUG ==========")
+    console.log("model:", model)
+    console.log("provider:", providerId)
+    console.log("hasApiKey:", !!apiKey)
+    console.log("envOpenRouter:", !!process.env.OPENROUTER_API_KEY)
+    console.log("======================================")
+
+    const languageModel = openproviders(
+      model,
+      {
+        enableSearch,
+      },
+      apiKey
+    )
+
     const result = streamText({
-      model: modelConfig.apiSdk(apiKey, { enableSearch }),
+      model: languageModel,
       system: effectiveSystemPrompt,
       messages: messages,
       tools: {} as ToolSet,

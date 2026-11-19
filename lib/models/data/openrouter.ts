@@ -29,10 +29,16 @@ export const openrouterModels: ModelConfig[] = [
     modelPage: "https://deepseek.com",
     releasedAt: "2024-04-01",
     icon: "deepseek",
-    apiSdk: (apiKey?: string) =>
-      createOpenRouter({
+    apiSdk: (apiKey?: string) => {
+      console.log("========== OPENROUTER SDK ==========")
+      console.log("receivedApiKey:", !!apiKey)
+      console.log("envApiKey:", !!process.env.OPENROUTER_API_KEY)
+      console.log("====================================")
+
+      return createOpenRouter({
         apiKey: apiKey || process.env.OPENROUTER_API_KEY,
-      }).chat("deepseek/deepseek-r1:free"),
+      }).chat("deepseek/deepseek-r1:free")
+    },
   },
   {
     id: "openrouter:anthropic/claude-sonnet-4",

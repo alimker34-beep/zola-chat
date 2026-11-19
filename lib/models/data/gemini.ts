@@ -84,33 +84,33 @@ const geminiModels: ModelConfig[] = [
     apiSdk: (apiKey?: string) =>
       openproviders("gemini-1.5-pro-002", undefined, apiKey),
   },
+  // 👇 هنا الحيلة: أعدنا استخدام ID قديم معروف للنظام، لكن غيرنا الاسم والـ apiSdk
   {
-    id: "gemini-2.0-flash-001",
-    name: "Gemini 2.0 Flash",
+    id: "gemini-2.0-flash-001", // اترك هذا المعرف كما هو (النظام يعرفه)
+    name: "Gemini 3.8 Flash",   // غيرنا الاسم للعرض فقط
     provider: "Google",
     providerId: "google",
     modelFamily: "Gemini",
     baseProviderId: "google",
-    description: "Gemini 2 Flash model tuned for ultra-low latency tasks.",
-    tags: ["fast", "multimodal", "next-gen"],
+    description: "Google's latest Flash model for coding, agents, and complex workflows.",
+    tags: ["fast", "multimodal", "coding", "agents"],
     contextWindow: 1000000,
-    inputCost: 0.075,
-    outputCost: 0.3,
+    inputCost: 0.75,
+    outputCost: 3.75,
     priceUnit: "per 1M tokens",
     vision: true,
     tools: true,
     audio: true,
-    reasoning: false,
+    reasoning: true,
     openSource: false,
     speed: "Fast",
-    intelligence: "Medium",
+    intelligence: "High",
     website: "https://gemini.google.com",
     apiDocs: "https://ai.google.dev/api/docs",
     modelPage: "https://deepmind.google/technologies/gemini",
-    releasedAt: "2024-12-11",
     icon: "gemini",
     apiSdk: (apiKey?: string) =>
-      openproviders("gemini-2.0-flash-001", undefined, apiKey),
+      openproviders("gemini-3.8-flash", undefined, apiKey), // 👈 الاسم الحقيقي الذي سيُرسل لجوجل
   },
   {
     id: "gemini-2.0-flash-lite-preview-02-05",
@@ -196,20 +196,21 @@ const geminiModels: ModelConfig[] = [
       openproviders("gemini-2.5-pro-exp-03-25", undefined, apiKey),
   },
   {
-    id: "gemma-3-27b-it",
-    name: "Gemma 3 27B",
+    // 👇 نفس الحيلة لنموذج Gemma
+    id: "gemma-3-27b-it", // اترك المعرف القديم لكي يعمل المزود
+    name: "Gemma 4 31B",  // الاسم الجديد
     provider: "Google",
     providerId: "google",
     modelFamily: "Gemma",
     baseProviderId: "google",
     description:
-      "Open-source 27B model designed for local inference and experimentation.",
-    tags: ["open-source", "OSS", "local", "research"],
-    contextWindow: 8192,
+      "Open-source 31B model from Google, free via Gemini API.",
+    tags: ["open-source", "OSS", "free", "research"],
+    contextWindow: 262144,
     inputCost: 0.0,
     outputCost: 0.0,
     priceUnit: "per 1M tokens",
-    vision: false,
+    vision: true,
     tools: true,
     audio: false,
     reasoning: true,
@@ -219,10 +220,10 @@ const geminiModels: ModelConfig[] = [
     website: "https://gemini.google.com",
     apiDocs: "https://ai.google.dev/api/docs",
     modelPage: "https://ai.google.dev/gemma",
-    releasedAt: "2024-12-01",
+    releasedAt: "2026-4-01",
     icon: "gemini",
     apiSdk: (apiKey?: string) =>
-      openproviders("gemma-3-27b-it", undefined, apiKey),
+      openproviders("gemma-4-31b-it", undefined, apiKey), // الاسم الحقيقي المرسل لجوجل
   },
 ]
 
