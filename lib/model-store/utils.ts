@@ -1,4 +1,3 @@
-import { FREE_MODELS_IDS } from "@/lib/config"
 import { ModelConfig } from "@/lib/models/types"
 
 /**
@@ -37,8 +36,9 @@ export function filterAndSortModels(
       }
 
       // Fallback to original sorting (free models first)
-      const aIsFree = FREE_MODELS_IDS.includes(a.id)
-      const bIsFree = FREE_MODELS_IDS.includes(b.id)
+      const aIsFree = a.isFree === true
+      const bIsFree = b.isFree === true
+
       return aIsFree === bIsFree ? 0 : aIsFree ? -1 : 1
     })
 }

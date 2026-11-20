@@ -1,4 +1,6 @@
-import { FREE_MODELS_IDS } from "../config"
+import {
+  canUsePlatformAccess,
+} from "./access"
 import { claudeModels } from "./data/claude"
 import { deepseekModels } from "./data/deepseek"
 import { geminiModels } from "./data/gemini"
@@ -82,27 +84,32 @@ export async function getAllModels(): Promise<ModelConfig[]> {
   }
 }
 
-export async function getModelsWithAccessFlags(): Promise<ModelConfig[]> {
+export async function getModelsWithAccessFlags(
+  options?: {
+    isAuthenticated?: boolean
+    userProviders?: string[]
+  }
+): Promise<ModelConfig[]> {
   const models = await getAllModels()
 
-  const freeModels = models
-    .filter(
-      (model) =>
-        FREE_MODELS_IDS.includes(model.id) || model.providerId === "ollama"
+  const isAuthenticated = options?.isAuthenticated ?? false
+  const userProviders = new Set(options?.userProviders ?? [])
+
+  return models.map((model) => {
+    const hasByokAccess =
+      userProviders.has(model.providerId) ||
+      model.providerId === "ollama"
+
+    const hasPlatformAccess = canUsePlatformAccess(
+      model,
+      isAuthenticated
     )
-    .map((model) => ({
-      ...model,
-      accessible: true,
-    }))
 
-  const proModels = models
-    .filter((model) => !freeModels.map((m) => m.id).includes(model.id))
-    .map((model) => ({
+    return {
       ...model,
-      accessible: false,
-    }))
-
-  return [...freeModels, ...proModels]
+      accessible: hasByokAccess || hasPlatformAccess,
+    }
+  })
 }
 
 export async function getModelsForProvider(
@@ -150,4 +157,4 @@ export const MODELS: ModelConfig[] = STATIC_MODELS
 export function refreshModelsCache(): void {
   dynamicModelsCache = null
   lastFetchTime = 0
-                        }
+}
