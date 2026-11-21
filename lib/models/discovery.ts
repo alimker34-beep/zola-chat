@@ -328,7 +328,7 @@ function normalizeOpenRouterModel(
 
     icon: getIcon(rawId, model.name),
 
-    accessible: true,
+    accessible: false,
 
     modality: model.architecture?.modality,
 

@@ -1,0 +1,35 @@
+{
+  "output": {
+    "style": "xml",
+    "removeComments": true,
+    "removeEmptyLines": true,
+    "showLineNumbers": true,
+    "topFilesLength": 15
+  },
+  "include": [
+    "app/**/*",
+    "lib/**/*",
+    "utils/**/*",
+    "components/common/**/*",
+    "components/prompt-kit/**/*",
+    "middleware.ts",
+    "next.config.ts",
+    "package.json",
+    "tsconfig.json"
+  ],
+  "ignore": {
+    "useGitignore": true,
+    "useDefaultPatterns": true,
+    "customPatterns": [
+      "components/ui/**",
+      "components/icons/**",
+      "components/motion-primitives/**",
+      "lib/models/data/**",
+      ".github/**",
+      "**/*.md",
+      "LICENSE",
+      "Dockerfile*",
+      "docker-compose*"
+    ]
+  }
+}

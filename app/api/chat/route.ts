@@ -1,9 +1,5 @@
 import { SYSTEM_PROMPT_DEFAULT } from "@/lib/config"
-import {
-  openproviders,
-  parseModelReference,
-} from "@/lib/openproviders"
-import type { ProviderWithoutOllama } from "@/lib/user-keys"
+import { openproviders } from "@/lib/openproviders"
 import { Attachment } from "@ai-sdk/ui-utils"
 import { Message as MessageAISDK, streamText, ToolSet } from "ai"
 import {
@@ -49,15 +45,24 @@ export async function POST(req: Request) {
       )
     }
 
-    const supabase = await validateAndTrackUsage({
+    const validation = await validateAndTrackUsage({
       userId,
       model,
       isAuthenticated,
     })
 
-    // Increment message count for successful validation
+    const { supabase, access, apiKey } = validation
+
+    // Increment usage only after successful access validation.
+    // BYOK/Ollama do not consume the platform daily limit.
     if (supabase) {
-      await incrementMessageCount({ supabase, userId })
+      await incrementMessageCount({
+        supabase,
+        userId,
+        model,
+        isAuthenticated,
+        source: access.source,
+      })
     }
 
     const userMessage = messages[messages.length - 1]
@@ -89,27 +94,6 @@ export async function POST(req: Request) {
     }
 
     const effectiveSystemPrompt = systemPrompt || SYSTEM_PROMPT_DEFAULT
-
-    const { providerId } = parseModelReference(model)
-
-    let apiKey: string | undefined
-
-    if (isAuthenticated && userId) {
-      const { getEffectiveApiKey } = await import("@/lib/user-keys")
-
-      if (providerId !== "ollama") {
-        apiKey =
-          (await getEffectiveApiKey(userId, providerId as ProviderWithoutOllama)) ||
-          undefined
-      }
-    }
-
-    console.log("========== ZOLA MODEL DEBUG ==========")
-    console.log("model:", model)
-    console.log("provider:", providerId)
-    console.log("hasApiKey:", !!apiKey)
-    console.log("envOpenRouter:", !!process.env.OPENROUTER_API_KEY)
-    console.log("======================================")
 
     const languageModel = openproviders(
       model,

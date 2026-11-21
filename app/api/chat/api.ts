@@ -5,68 +5,161 @@ import type {
   StoreAssistantMessageParams,
   SupabaseClientType,
 } from "@/app/types/api.types"
-import { FREE_MODELS_IDS, NON_AUTH_ALLOWED_MODELS } from "@/lib/config"
-import { getProviderForModel } from "@/lib/openproviders/provider-map"
+import {
+  getAllModels,
+} from "@/lib/models"
+import {
+  resolveModelAccess,
+  type ModelAccessResult,
+} from "@/lib/models/access"
+import { parseModelReference } from "@/lib/openproviders"
 import { sanitizeUserInput } from "@/lib/sanitize"
 import { validateUserIdentity } from "@/lib/server/api"
-import { checkUsageByModel, incrementUsage } from "@/lib/usage"
-import { getUserKey, type ProviderWithoutOllama } from "@/lib/user-keys"
+import {
+  checkUsageByModel,
+  incrementUsageByModel,
+} from "@/lib/usage"
+import {
+  resolveApiKey,
+  type ProviderWithoutOllama,
+} from "@/lib/user-keys"
+
+export type ValidatedChatAccess = {
+  supabase: SupabaseClientType | null
+  access: ModelAccessResult
+  apiKey?: string
+}
 
 export async function validateAndTrackUsage({
   userId,
   model,
   isAuthenticated,
-}: ChatApiParams): Promise<SupabaseClientType | null> {
-  const supabase = await validateUserIdentity(userId, isAuthenticated)
-  if (!supabase) return null
+}: ChatApiParams): Promise<ValidatedChatAccess> {
+  const supabase = await validateUserIdentity(
+    userId,
+    isAuthenticated
+  )
 
-  // Check if user is authenticated
-  if (!isAuthenticated) {
-    // For unauthenticated users, only allow specific models
-    if (!NON_AUTH_ALLOWED_MODELS.includes(model)) {
-      throw new Error(
-        "This model requires authentication. Please sign in to access more models."
-      )
-    }
-  } else {
-    // For authenticated users, check API key requirements
-    const provider = getProviderForModel(model)
+  const allModels = await getAllModels()
 
-    if (provider !== "ollama") {
-      const userApiKey = await getUserKey(
+  const modelConfig = allModels.find(
+    candidate => candidate.id === model
+  )
+
+  if (!modelConfig) {
+    throw new Error(`Unknown model: ${model}`)
+  }
+
+  const { providerId } =
+    parseModelReference(model)
+
+  let apiKey: string | undefined
+  let hasByokKey = false
+  let hasPlatformKey = false
+
+  if (providerId !== "ollama") {
+    const keyResolution =
+      await resolveApiKey(
         userId,
-        provider as ProviderWithoutOllama
+        providerId as ProviderWithoutOllama
       )
 
-      // If no API key and model is not in free list, deny access
-      if (!userApiKey && !FREE_MODELS_IDS.includes(model)) {
+    apiKey =
+      keyResolution.key ?? undefined
+
+    hasByokKey =
+      keyResolution.source === "byok"
+
+    hasPlatformKey =
+      keyResolution.source === "platform"
+  }
+
+  const access =
+    resolveModelAccess({
+      model: modelConfig,
+      isAuthenticated,
+      hasByokKey,
+      hasPlatformKey,
+    })
+
+  if (!access.allowed) {
+    switch (access.reason) {
+      case "platform_model_not_allowed":
         throw new Error(
-          `This model requires an API key for ${provider}. Please add your API key in settings or use a free model.`
+          "This model is not available without your own provider API key."
         )
-      }
+
+      case "authentication_required":
+        throw new Error(
+          "This model requires authentication."
+        )
+
+      case "api_key_required":
+        throw new Error(
+          `No API key is configured for ${providerId}. Please add your own API key or use a platform-enabled model.`
+        )
+
+      case "platform_disabled":
+        throw new Error(
+          "Platform access is currently unavailable for this model."
+        )
+
+      default:
+        throw new Error(
+          "You do not have access to this model."
+        )
     }
   }
 
-  // Check usage limits for the model
-  await checkUsageByModel(supabase, userId, model, isAuthenticated)
+  if (supabase) {
+    await checkUsageByModel(
+      supabase,
+      userId,
+      model,
+      isAuthenticated,
+      access.source
+    )
+  }
 
-  return supabase
+  return {
+    supabase,
+    access,
+    apiKey,
+  }
 }
 
 export async function incrementMessageCount({
   supabase,
   userId,
+  model,
+  isAuthenticated,
+  source,
 }: {
   supabase: SupabaseClientType
   userId: string
+  model: string
+  isAuthenticated: boolean
+  source: "byok" | "platform" | "ollama" | "none"
 }): Promise<void> {
   if (!supabase) return
 
+  if (source === "none") {
+    return
+  }
+
   try {
-    await incrementUsage(supabase, userId)
+    await incrementUsageByModel(
+      supabase,
+      userId,
+      model,
+      isAuthenticated,
+      source
+    )
   } catch (err) {
-    console.error("Failed to increment message count:", err)
-    // Don't throw error as this shouldn't block the chat
+    console.error(
+      "Failed to increment message count:",
+      err
+    )
   }
 }
 
@@ -82,17 +175,22 @@ export async function logUserMessage({
 }: LogUserMessageParams): Promise<void> {
   if (!supabase) return
 
-  const { error } = await supabase.from("messages").insert({
-    chat_id: chatId,
-    role: "user",
-    content: sanitizeUserInput(content),
-    experimental_attachments: attachments,
-    user_id: userId,
-    message_group_id,
-  })
+  const { error } = await supabase
+    .from("messages")
+    .insert({
+      chat_id: chatId,
+      role: "user",
+      content: sanitizeUserInput(content),
+      experimental_attachments: attachments,
+      user_id: userId,
+      message_group_id,
+    })
 
   if (error) {
-    console.error("Error saving user message:", error)
+    console.error(
+      "Error saving user message:",
+      error
+    )
   }
 }
 
@@ -104,6 +202,7 @@ export async function storeAssistantMessage({
   model,
 }: StoreAssistantMessageParams): Promise<void> {
   if (!supabase) return
+
   try {
     await saveFinalAssistantMessage(
       supabase,
@@ -113,6 +212,9 @@ export async function storeAssistantMessage({
       model
     )
   } catch (err) {
-    console.error("Failed to save assistant messages:", err)
+    console.error(
+      "Failed to save assistant messages:",
+      err
+    )
   }
 }

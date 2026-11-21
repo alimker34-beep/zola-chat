@@ -6,19 +6,36 @@ export type PlatformAccessAudience =
   | "guest"
   | "disabled"
 
+export type ModelAccessSource =
+  | "byok"
+  | "platform"
+  | "ollama"
+  | "none"
+
+export type ModelAccessReason =
+  | "byok"
+  | "platform"
+  | "ollama"
+  | "platform_disabled"
+  | "platform_model_not_allowed"
+  | "authentication_required"
+  | "api_key_required"
+
+export type ModelAccessResult = {
+  allowed: boolean
+  source: ModelAccessSource
+  reason: ModelAccessReason
+}
+
 export const PLATFORM_ACCESS = {
   enabled: true,
 
-  // Who may use the platform API key?
   audience: "all" as PlatformAccessAudience,
 
-  // IMPORTANT:
-  // Only models explicitly listed here may consume the platform key.
   modelIds: [
-    "openrouter:google/gemini-2.5-flash",
+    "openrouter:nvidia/nemotron-3-ultra:free",
   ],
 
-  // Platform-funded usage limits.
   guestDailyLimit: 5,
   authenticatedDailyLimit: 1000,
 }
@@ -42,22 +59,22 @@ export function canUsePlatformAccess(
     return false
   }
 
-  if (PLATFORM_ACCESS.audience === "disabled") {
-    return false
-  }
+  switch (PLATFORM_ACCESS.audience) {
+    case "all":
+      return true
 
-  if (
-    PLATFORM_ACCESS.audience === "authenticated" &&
-    !isAuthenticated
-  ) {
-    return false
-  }
+    case "authenticated":
+      return isAuthenticated
 
-  if (PLATFORM_ACCESS.audience === "guest" && isAuthenticated) {
-    return false
-  }
+    case "guest":
+      return !isAuthenticated
 
-  return true
+    case "disabled":
+      return false
+
+    default:
+      return false
+  }
 }
 
 export function getPlatformDailyLimit(
@@ -66,4 +83,68 @@ export function getPlatformDailyLimit(
   return isAuthenticated
     ? PLATFORM_ACCESS.authenticatedDailyLimit
     : PLATFORM_ACCESS.guestDailyLimit
+}
+
+export function resolveModelAccess({
+  model,
+  isAuthenticated,
+  hasByokKey,
+  hasPlatformKey,
+}: {
+  model: ModelConfig
+  isAuthenticated: boolean
+  hasByokKey: boolean
+  hasPlatformKey: boolean
+}): ModelAccessResult {
+  if (model.providerId === "ollama") {
+    return {
+      allowed: true,
+      source: "ollama",
+      reason: "ollama",
+    }
+  }
+
+  if (hasByokKey) {
+    return {
+      allowed: true,
+      source: "byok",
+      reason: "byok",
+    }
+  }
+
+  if (!isPlatformModel(model.id)) {
+    return {
+      allowed: false,
+      source: "none",
+      reason: "platform_model_not_allowed",
+    }
+  }
+
+  if (!canUsePlatformAccess(model, isAuthenticated)) {
+    return {
+      allowed: false,
+      source: "none",
+      reason:
+        PLATFORM_ACCESS.audience === "disabled"
+          ? "platform_disabled"
+          : PLATFORM_ACCESS.audience === "authenticated" &&
+              !isAuthenticated
+            ? "authentication_required"
+            : "platform_disabled",
+    }
+  }
+
+  if (!hasPlatformKey) {
+    return {
+      allowed: false,
+      source: "none",
+      reason: "api_key_required",
+    }
+  }
+
+  return {
+    allowed: true,
+    source: "platform",
+    reason: "platform",
+  }
 }

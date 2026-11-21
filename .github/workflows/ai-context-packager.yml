@@ -1,0 +1,106 @@
+name: AI Context Packager (Pro)
+
+on:
+  # يسمح لك بتشغيله يدوياً من الجوال أو المتصفح مع كتابة المجلدات أو الملفات التي تريدها
+  workflow_dispatch:
+    inputs:
+      target_folders:
+        description: 'ملفات أو مجلدات للنسخة الكاملة غير المضغوطة (مثال: lib/usage.ts,app/api/chat/api.ts,app/api/create-chat/api.ts,lib/models/access.ts)'
+        required: false
+        default: 'lib/usage.ts,app/api/chat/api.ts,app/api/create-chat/api.ts,lib/models/access.ts,lib/models/index.ts,app/api/models/route.ts'
+        type: string
+      compress_level:
+        description: 'تفعيل الضغط الهيكلي الذكي (Tree-sitter) للنسخة الشاملة'
+        required: false
+        default: true
+        type: boolean
+  # يعمل تلقائياً عند رفع تحديثات على الكود في الفرع الرئيسي
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'app/**'
+      - 'lib/**'
+      - 'utils/**'
+      - 'components/**'
+
+jobs:
+  build-ai-context:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1. Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 2. Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: 3. Create Output Workspace
+        run: mkdir -p ai-bundle
+
+      - name: 4. Generate Clean Architecture & Dependency Map (Madge + Knip)
+        run: |
+          {
+            echo "# PROJECT ARCHITECTURE & DEPENDENCY REPORT"
+            echo ""
+            echo "## 1. Circular Dependencies & Module Graph (Madge)"
+            npx --yes madge --extensions ts,tsx --circular app lib utils 2>&1 || true
+            echo ""
+            echo "## 2. Unused Files & Exports Audit (Knip)"
+            npx --yes knip --no-exit-code 2>&1 || true
+          } > ai-bundle/00-architecture-map.md
+
+      - name: 5. Generate Ultra-Compressed Full Context (Repomix AST Compress)
+        run: |
+          COMPRESS_FLAG=""
+          if [ "${{ github.event.inputs.compress_level }}" != "false" ]; then
+            COMPRESS_FLAG="--compress"
+          fi
+
+          CONFIG_ARG=""
+          if [ -f "repomix.config.json" ]; then
+            CONFIG_ARG="--config repomix.config.json"
+          fi
+
+          npx --yes repomix \
+            $CONFIG_ARG \
+            $COMPRESS_FLAG \
+            --include "app/**/*,lib/**/*,utils/**/*,components/common/**/*,components/prompt-kit/**/*,middleware.ts,next.config.ts,package.json,tsconfig.json" \
+            --ignore "components/ui/**,components/icons/**,components/motion-primitives/**,lib/models/data/**,.github/**,**/*.md,LICENSE,Dockerfile*,docker-compose*" \
+            --style xml \
+            --remove-comments \
+            --remove-empty-lines \
+            --output ai-bundle/01-project-compressed.xml
+
+      - name: 6. Generate Full Uncompressed Targeted Context (Selected Files/Folders Only)
+        run: |
+          TARGETS="${{ github.event.inputs.target_folders }}"
+          if [ -z "$TARGETS" ]; then
+            TARGETS="lib/usage.ts,app/api/chat/api.ts,app/api/create-chat/api.ts"
+          fi
+
+          npx --yes repomix \
+            --include "$TARGETS" \
+            --ignore "components/ui/**,components/icons/**,lib/models/data/**" \
+            --style xml \
+            --remove-comments \
+            --remove-empty-lines \
+            --output ai-bundle/02-targeted-raw.xml
+
+      - name: 7. Generate Token & Size Summary
+        run: |
+          {
+            echo "### AI Context Bundle Summary"
+            ls -lh ai-bundle/
+            wc -l ai-bundle/*
+            echo "✅ Files are ready to download from Artifacts below."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 8. Upload Bundle to GitHub Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: zola-ai-context-bundle
+          path: ai-bundle/
+          retention-days: 7

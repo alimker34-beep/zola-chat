@@ -1,4 +1,3 @@
-import { openproviders } from "@/lib/openproviders"
 import { ModelConfig } from "../types"
 
 const grokModels: ModelConfig[] = [
@@ -28,7 +27,6 @@ const grokModels: ModelConfig[] = [
     modelPage: "https://x.ai/news/grok-2",
     releasedAt: "2024-01-21",
     icon: "xai",
-    apiSdk: (apiKey?: string) => openproviders("grok-2", undefined, apiKey),
   },
   {
     id: "grok-2-vision",
@@ -54,8 +52,6 @@ const grokModels: ModelConfig[] = [
     apiDocs: "https://docs.x.ai/docs/models",
     modelPage: "https://x.ai/news/grok-2",
     icon: "xai",
-    apiSdk: (apiKey?: string) =>
-      openproviders("grok-2-vision", undefined, apiKey),
   },
   {
     id: "grok-3",
@@ -81,7 +77,6 @@ const grokModels: ModelConfig[] = [
     apiDocs: "https://docs.x.ai/docs/models",
     releasedAt: "2024-05-01",
     icon: "xai",
-    apiSdk: (apiKey?: string) => openproviders("grok-3", undefined, apiKey),
   },
   {
     id: "grok-3-fast",
@@ -108,8 +103,6 @@ const grokModels: ModelConfig[] = [
     apiDocs: "https://docs.x.ai/docs/models",
     releasedAt: "2024-05-01",
     icon: "xai",
-    apiSdk: (apiKey?: string) =>
-      openproviders("grok-3-fast", undefined, apiKey),
   },
   {
     id: "grok-3-mini",
@@ -134,8 +127,6 @@ const grokModels: ModelConfig[] = [
     website: "https://x.ai",
     apiDocs: "https://docs.x.ai/docs/models",
     icon: "xai",
-    apiSdk: (apiKey?: string) =>
-      openproviders("grok-3-mini", undefined, apiKey),
   },
   {
     id: "grok-3-mini-fast",
@@ -161,8 +152,6 @@ const grokModels: ModelConfig[] = [
     website: "https://x.ai",
     apiDocs: "https://docs.x.ai/docs/models",
     icon: "xai",
-    apiSdk: (apiKey?: string) =>
-      openproviders("grok-3-mini-fast", undefined, apiKey),
   },
 ]
 

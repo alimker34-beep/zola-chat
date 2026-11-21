@@ -33,55 +33,59 @@ const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 export async function getAllModels(): Promise<ModelConfig[]> {
   const now = Date.now()
 
-  if (dynamicModelsCache && now - lastFetchTime < CACHE_DURATION) {
+  if (
+    dynamicModelsCache &&
+    now - lastFetchTime < CACHE_DURATION
+  ) {
     return dynamicModelsCache
   }
 
-  try {
-    const [detectedOllamaModels, discoveredOpenRouterModels] =
-      await Promise.all([
-        getOllamaModels(),
-        discoverOpenRouterModels(),
-      ])
-
-    const staticModelsWithoutOllama = STATIC_MODELS.filter(
-      (model) => model.providerId !== "ollama"
+  const staticModelsWithoutOllamaAndOpenRouter =
+    STATIC_MODELS.filter(
+      (model) =>
+        model.providerId !== "ollama" &&
+        model.providerId !== "openrouter"
     )
 
-    dynamicModelsCache = [
-      ...staticModelsWithoutOllama,
-      ...detectedOllamaModels,
-      ...discoveredOpenRouterModels,
-    ]
+  const [ollamaResult, openRouterResult] =
+    await Promise.allSettled([
+      getOllamaModels(),
+      discoverOpenRouterModels(),
+    ])
 
-    lastFetchTime = now
+  const detectedOllamaModels =
+    ollamaResult.status === "fulfilled"
+      ? ollamaResult.value
+      : []
 
-    return dynamicModelsCache
-  } catch (error) {
+  const discoveredOpenRouterModels =
+    openRouterResult.status === "fulfilled"
+      ? openRouterResult.value
+      : []
+
+  if (ollamaResult.status === "rejected") {
     console.warn(
-      "Failed to load dynamic models, using available static models:",
-      error
+      "Failed to load dynamic Ollama models:",
+      ollamaResult.reason
     )
-
-    const staticModelsWithoutOllama = STATIC_MODELS.filter(
-      (model) => model.providerId !== "ollama"
-    )
-
-    try {
-      const detectedOllamaModels = await getOllamaModels()
-
-      dynamicModelsCache = [
-        ...staticModelsWithoutOllama,
-        ...detectedOllamaModels,
-      ]
-
-      lastFetchTime = now
-
-      return dynamicModelsCache
-    } catch {
-      return STATIC_MODELS
-    }
   }
+
+  if (openRouterResult.status === "rejected") {
+    console.warn(
+      "Failed to discover OpenRouter models:",
+      openRouterResult.reason
+    )
+  }
+
+  dynamicModelsCache = [
+    ...staticModelsWithoutOllamaAndOpenRouter,
+    ...detectedOllamaModels,
+    ...discoveredOpenRouterModels,
+  ]
+
+  lastFetchTime = now
+
+  return dynamicModelsCache
 }
 
 export async function getModelsWithAccessFlags(

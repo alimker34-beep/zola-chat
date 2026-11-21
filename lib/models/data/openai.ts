@@ -1,4 +1,3 @@
-import { openproviders } from "@/lib/openproviders"
 import { ModelConfig } from "../types"
 
 const openaiModels: ModelConfig[] = [
@@ -24,8 +23,6 @@ const openaiModels: ModelConfig[] = [
     apiDocs: "https://platform.openai.com/docs/models/gpt-3.5-turbo",
     modelPage: "https://platform.openai.com/docs/models/gpt-3.5-turbo",
     icon: "openai",
-    apiSdk: (apiKey?: string) =>
-      openproviders("gpt-3.5-turbo", undefined, apiKey),
   },
   {
     id: "gpt-4-turbo",
@@ -49,8 +46,6 @@ const openaiModels: ModelConfig[] = [
     apiDocs: "https://platform.openai.com/docs/models/gpt-4-turbo",
     modelPage: "https://platform.openai.com/docs/models/gpt-4-turbo",
     icon: "openai",
-    apiSdk: (apiKey?: string) =>
-      openproviders("gpt-4-turbo", undefined, apiKey),
   },
   {
     id: "gpt-4.1",
@@ -74,7 +69,6 @@ const openaiModels: ModelConfig[] = [
     apiDocs: "https://platform.openai.com/docs/models/gpt-4.1",
     modelPage: "https://platform.openai.com/docs/models/gpt-4.1",
     icon: "openai",
-    apiSdk: (apiKey?: string) => openproviders("gpt-4.1", undefined, apiKey),
   },
   {
     id: "gpt-4.1-mini",
@@ -98,8 +92,6 @@ const openaiModels: ModelConfig[] = [
     apiDocs: "https://platform.openai.com/docs/models/gpt-4.1-mini",
     modelPage: "https://platform.openai.com/docs/models/gpt-4.1-mini",
     icon: "openai",
-    apiSdk: (apiKey?: string) =>
-      openproviders("gpt-4.1-mini", undefined, apiKey),
   },
   {
     id: "gpt-4.1-nano",
@@ -123,8 +115,6 @@ const openaiModels: ModelConfig[] = [
     apiDocs: "https://platform.openai.com/docs/models/gpt-4.1-mini",
     modelPage: "https://platform.openai.com/docs/models/gpt-4.1-mini",
     icon: "openai",
-    apiSdk: (apiKey?: string) =>
-      openproviders("gpt-4.1-nano", undefined, apiKey),
   },
   {
     id: "gpt-4.5-preview",
@@ -148,8 +138,6 @@ const openaiModels: ModelConfig[] = [
     apiDocs: "https://platform.openai.com/docs/models/gpt-4.5-preview",
     modelPage: "https://platform.openai.com/docs/models/gpt-4.5-preview",
     icon: "openai",
-    apiSdk: (apiKey?: string) =>
-      openproviders("gpt-4.5-preview", undefined, apiKey),
   },
   {
     id: "gpt-4o",
@@ -173,7 +161,6 @@ const openaiModels: ModelConfig[] = [
     apiDocs: "https://platform.openai.com/docs/models/gpt-4o",
     modelPage: "https://platform.openai.com/docs/models/gpt-4o",
     icon: "openai",
-    apiSdk: (apiKey?: string) => openproviders("gpt-4o", undefined, apiKey),
   },
   {
     id: "gpt-4o-mini",
@@ -197,8 +184,6 @@ const openaiModels: ModelConfig[] = [
     apiDocs: "https://platform.openai.com/docs/models/gpt-4o-mini",
     modelPage: "https://platform.openai.com/docs/models/gpt-4o-mini",
     icon: "openai",
-    apiSdk: (apiKey?: string) =>
-      openproviders("gpt-4o-mini", undefined, apiKey),
   },
   {
     id: "o1",
@@ -223,7 +208,6 @@ const openaiModels: ModelConfig[] = [
     modelPage: "https://platform.openai.com/docs/models/o1",
     releasedAt: "2024-12-20",
     icon: "openai",
-    apiSdk: (apiKey?: string) => openproviders("o1", undefined, apiKey),
   },
   {
     id: "o3-mini",
@@ -248,7 +232,6 @@ const openaiModels: ModelConfig[] = [
     modelPage: "https://platform.openai.com/docs/models/o3-mini",
     releasedAt: "2024-12-20",
     icon: "openai",
-    apiSdk: (apiKey?: string) => openproviders("o3-mini", undefined, apiKey),
   },
   {
     id: "o1-mini",
@@ -273,7 +256,6 @@ const openaiModels: ModelConfig[] = [
     modelPage: "https://platform.openai.com/docs/models/o1-mini",
     releasedAt: "2024-12-20",
     icon: "openai",
-    apiSdk: (apiKey?: string) => openproviders("o1-mini", undefined, apiKey),
   },
   {
     id: "o3",
@@ -298,7 +280,6 @@ const openaiModels: ModelConfig[] = [
     modelPage: "https://platform.openai.com/docs/models/o3",
     releasedAt: "2024-12-20",
     icon: "openai",
-    apiSdk: (apiKey?: string) => openproviders("o3-mini", undefined, apiKey),
   },
   {
     id: "o4-mini",
@@ -322,7 +303,6 @@ const openaiModels: ModelConfig[] = [
     apiDocs: "https://platform.openai.com/docs/models/o4-mini",
     modelPage: "https://platform.openai.com/docs/models/o4-mini",
     icon: "openai",
-    apiSdk: (apiKey?: string) => openproviders("o4-mini", undefined, apiKey),
   },
 ]
 

@@ -1,4 +1,3 @@
-import { openproviders } from "@/lib/openproviders"
 import { ModelConfig } from "../types"
 
 const geminiModels: ModelConfig[] = [
@@ -26,8 +25,6 @@ const geminiModels: ModelConfig[] = [
     apiDocs: "https://ai.google.dev/api/docs",
     modelPage: "https://deepmind.google/technologies/gemini",
     icon: "gemini",
-    apiSdk: (apiKey?: string) =>
-      openproviders("gemini-1.5-flash-002", undefined, apiKey),
   },
   {
     id: "gemini-1.5-flash-8b",
@@ -53,8 +50,6 @@ const geminiModels: ModelConfig[] = [
     apiDocs: "https://ai.google.dev/api/docs",
     modelPage: "https://deepmind.google/technologies/gemini",
     icon: "gemini",
-    apiSdk: (apiKey?: string) =>
-      openproviders("gemini-1.5-flash-8b", undefined, apiKey),
   },
   {
     id: "gemini-1.5-pro-002",
@@ -81,10 +76,8 @@ const geminiModels: ModelConfig[] = [
     modelPage: "https://deepmind.google/technologies/gemini",
     releasedAt: "2024-02-15",
     icon: "gemini",
-    apiSdk: (apiKey?: string) =>
-      openproviders("gemini-1.5-pro-002", undefined, apiKey),
   },
-  // 👇 هنا الحيلة: أعدنا استخدام ID قديم معروف للنظام، لكن غيرنا الاسم والـ apiSdk
+  // 👇 هنا الحيلة: أعدنا استخدام ID قديم معروف للنظام، لكن غيرنا الاسم
   {
     id: "gemini-2.0-flash-001", // اترك هذا المعرف كما هو (النظام يعرفه)
     name: "Gemini 3.8 Flash",   // غيرنا الاسم للعرض فقط
@@ -109,8 +102,6 @@ const geminiModels: ModelConfig[] = [
     apiDocs: "https://ai.google.dev/api/docs",
     modelPage: "https://deepmind.google/technologies/gemini",
     icon: "gemini",
-    apiSdk: (apiKey?: string) =>
-      openproviders("gemini-3.8-flash", undefined, apiKey), // 👈 الاسم الحقيقي الذي سيُرسل لجوجل
   },
   {
     id: "gemini-2.0-flash-lite-preview-02-05",
@@ -136,8 +127,6 @@ const geminiModels: ModelConfig[] = [
     apiDocs: "https://ai.google.dev/api/docs",
     modelPage: "https://deepmind.google/technologies/gemini",
     icon: "gemini",
-    apiSdk: (apiKey?: string) =>
-      openproviders("gemini-2.0-flash-lite-preview-02-05", undefined, apiKey),
   },
   {
     id: "gemini-2.5-pro-exp-03-25",
@@ -164,8 +153,6 @@ const geminiModels: ModelConfig[] = [
     apiDocs: "https://ai.google.dev/api/docs",
     modelPage: "https://deepmind.google/technologies/gemini",
     icon: "gemini",
-    apiSdk: (apiKey?: string) =>
-      openproviders("gemini-2.5-pro-exp-03-25", undefined, apiKey),
   },
   {
     id: "gemini-2.5-pro-exp-03-25-pro",
@@ -192,8 +179,6 @@ const geminiModels: ModelConfig[] = [
     apiDocs: "https://ai.google.dev/api/docs",
     modelPage: "https://deepmind.google/technologies/gemini",
     icon: "gemini",
-    apiSdk: (apiKey?: string) =>
-      openproviders("gemini-2.5-pro-exp-03-25", undefined, apiKey),
   },
   {
     // 👇 نفس الحيلة لنموذج Gemma
@@ -222,8 +207,6 @@ const geminiModels: ModelConfig[] = [
     modelPage: "https://ai.google.dev/gemma",
     releasedAt: "2026-4-01",
     icon: "gemini",
-    apiSdk: (apiKey?: string) =>
-      openproviders("gemma-4-31b-it", undefined, apiKey), // الاسم الحقيقي المرسل لجوجل
   },
 ]
 
